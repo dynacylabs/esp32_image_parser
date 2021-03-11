@@ -3,10 +3,11 @@ This tool can be used to convert a flash dump from an ESP32 into an ELF file.
 
 Authors: @lynerc and @\_NickMiles\_
 
-There are three actions:
+There are five actions:
 - **show_partitions** - will display all of the partitions found in an image file.
 - **dump_partition** - will dump the raw bytes of a specified partition into a file.
 - **create_elf** - reconstruct an ELF file from an 'app' partition (e.g. ota_0).
+- **create_elf_from_part** - reconstruct an ELF file from a partition by passing the partition as input
 - **dump_nvs** - will parse a specified NVS partition and dump its contents.
 
 # Setup
