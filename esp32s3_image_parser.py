@@ -6,8 +6,11 @@ import json
 import os, argparse
 from makeelf.elf import *
 from esptool import *
-from esp32_firmware_reader import *
+from esptool.bin_image import *
+from esp32s3_firmware_reader import *
 from read_nvs import *
+
+symbols_dump = os.path.dirname(os.path.realpath(__file__)) + "/symbols_dump.txt"
 
 def image_base_name(path):
     filename_w_ext = os.path.basename(path)
@@ -38,7 +41,7 @@ def calcPhFlg(flags):
     return p_flags
 
 def image2elf(filename, output_file, verbose=False):
-    image = LoadFirmwareImage('esp32', filename)
+    image = LoadFirmwareImage('esp32s3', filename)
 
     # parse image name
     # e.g. 'image.bin' turns to 'image'
@@ -52,9 +55,10 @@ def image2elf(filename, output_file, verbose=False):
     # maps segment names to ELF sections
     section_map = {
         'DROM'                      : '.flash.rodata',
-        'BYTE_ACCESSIBLE, DRAM, DMA': '.dram0.data',
+        'BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM'     : '.dram0.data',
+        'MEM_INTERNAL, IRAM'        : '.iram0.text',
         'IROM'                      : '.flash.text',
-        #'RTC_IRAM'                  : '.rtc.text' TODO
+        #'RTC_IRAM'                 : '.rtc.text' TODO
     }
 
     # map to hold pre-defined ELF section header attributes
@@ -86,6 +90,8 @@ def image2elf(filename, output_file, verbose=False):
         # TODO when processing an image, there was an empty segment name?
         if segment_name == '':
             continue
+	
+        print(segment_name)
 
         section_name = ''
         # handle special case
@@ -154,7 +160,11 @@ def image2elf(filename, output_file, verbose=False):
 
         if (name == '.iram0.vectors'):
             # combine these
-            size = len(section_data['.iram0.vectors']['data']) + len(section_data['.iram0.text']['data'])
+            if ('.iram0.vectors' in section_data):
+                  size = len(section_data['.iram0.vectors']['data']) + len(section_data['.iram0.text']['data'])
+            else: 
+                  name = '.iram0.text'
+                  size = len(section_data['.iram0.text']['data'])
         else:
             size = len(section_data[name]['data'])
         
@@ -186,7 +196,7 @@ def image2elf(filename, output_file, verbose=False):
 
 def add_elf_symbols(elf):
 
-    fh = open("symbols_dump.txt", "r")
+    fh = open(symbols_dump, "r")
     lines = fh.readlines()
 
     bind_map = {"LOCAL" : STB.STB_LOCAL, "GLOBAL" : STB.STB_GLOBAL}
@@ -225,7 +235,7 @@ def main():
     args = arg_parser.parse_args()
 
     with open(args.input, 'rb') as fh:
-        verbose = False
+        verbose = True
         # read_partition_table will show the partitions if verbose
         if args.action == 'show_partitions' or args.v is True:
             verbose = True
