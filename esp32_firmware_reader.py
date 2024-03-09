@@ -17,10 +17,17 @@ for i in range(0,16):
   PART_SUBTYPES_APP[0x10 | i] = "ota_" + str(i)
 
 PART_SUBTYPES_DATA = {
-  0x00: "OTA",
-  0x01: "RF",
-  0x02: "WIFI",
-  0x04: "NVS"
+    0x00: "ota",
+    0x01: "phy",
+    0x02: "nvs",
+    0x03: "coredump",
+    0x04: "nvs_keys",
+    0x05: "efuse",
+    0x06: "undefined",
+    0x80: "esphttpd",
+    0x81: "fat",
+    0x82: "spiffs",
+    0x83: "littlefs"
 }
 
 def print_verbose(verbose, value):
