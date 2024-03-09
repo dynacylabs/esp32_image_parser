@@ -235,6 +235,14 @@ def main():
         if args.action == 'show_partitions' or args.v is True:
             verbose = True
 
+        if args.appimage:
+            if args.action != "create_elf":
+                print("appimage option can only be used with create_elf action")
+            if args.output is None:
+                print("Need output file name")
+            image2elf(args.input, args.output, verbose)
+            exit(0)
+
         # parse that ish
         if "partition_offset" in args:
             args.partition_offset = int(args.partition_offset, 16)
