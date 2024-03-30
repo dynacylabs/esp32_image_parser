@@ -224,8 +224,9 @@ def main():
     arg_parser.add_argument('-output', help='Output file name')
     arg_parser.add_argument('-nvs_output_type', help='output type for nvs dump', type=str, choices=["text","json"], default="text")
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
-    arg_parser.add_argument('-partition_offset', help='Set partition offset(HEX) (e.g. 0x8000)')
+    arg_parser.add_argument('-partition_offset', default='0x8000', help='Set partition offset(HEX) (e.g. 0x8000)')
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
+    arg_parser.add_argument('-appimage', default=False, help='Convert appimage to ELF', action='store_true')
 
     args = arg_parser.parse_args()
 
@@ -244,8 +245,7 @@ def main():
             exit(0)
 
         # parse that ish
-        if "partition_offset" in args:
-            args.partition_offset = int(args.partition_offset, 16)
+        args.partition_offset = int(args.partition_offset, 16)
 
         part_table = read_partition_table(fh, verbose, p_offset=args.partition_offset)
 
@@ -255,6 +255,17 @@ def main():
                 return
 
             part_name = args.partition
+
+            if part_name == 'all':
+                for part in part_table:
+                    dump_file = part + '_out.bin'
+                    if args.output is not None:
+                        if not os.path.exists(args.output):
+                            os.makedirs(args.output)
+                        dump_file = args.output + '/' + dump_file
+                    dump_partition(fh, part, part_table[part]['offset'], part_table[part]['size'], dump_file)
+                print("All partitions dumped")
+                exit(0)
             
             if args.action == 'dump_partition' and args.output is not None:
                 dump_file = args.output

@@ -23,7 +23,7 @@ PART_SUBTYPES_DATA = {
     0x03: "coredump",
     0x04: "nvs_keys",
     0x05: "efuse",
-    0x06: "undefined",
+    0x06: "undefined(0x06)",
     0x80: "esphttpd",
     0x81: "fat",
     0x82: "spiffs",
@@ -69,7 +69,7 @@ def read_partition_table(fh, verbose=False, p_offset=0x8000):
         if(part_type in PART_TYPES):
             part_type_label = PART_TYPES[part_type]
 
-        part_subtype_label = "unknown"
+        part_subtype_label = f"unknown({hex(part_subtype)})"
         if(part_type_label == "APP" and part_subtype in PART_SUBTYPES_APP):
             part_subtype_label = PART_SUBTYPES_APP[part_subtype]
         if(part_type_label == "DATA" and part_subtype in PART_SUBTYPES_DATA):
