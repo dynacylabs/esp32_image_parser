@@ -6,6 +6,7 @@ import json
 import os, argparse
 from makeelf.elf import *
 from esptool import *
+from esptool.bin_image import *
 from esp32_firmware_reader import *
 from read_nvs import *
 
@@ -38,7 +39,7 @@ def calcPhFlg(flags):
     return p_flags
 
 def image2elf(filename, output_file, verbose=False):
-    image = LoadFirmwareImage('esp32', filename)
+    image = LoadFirmwareImage('esp32s3', filename)
 
     # parse image name
     # e.g. 'image.bin' turns to 'image'
@@ -86,7 +87,6 @@ def image2elf(filename, output_file, verbose=False):
         # TODO when processing an image, there was an empty segment name?
         if segment_name == '':
             continue
-
         section_name = ''
         # handle special case
         # iram is split into .vectors and .text
@@ -101,6 +101,7 @@ def image2elf(filename, output_file, verbose=False):
             if segment_name in section_map:
                 section_name = section_map[segment_name]
             else:
+                continue
                 print("Unsure what to do with segment: " + segment_name)
 
         # if we have a mapped segment <-> section
@@ -152,10 +153,12 @@ def image2elf(filename, output_file, verbose=False):
     print_verbose(verbose, "\nAdding program headers")
     for (name, flags) in segments.items():
 
-        if (name == '.iram0.vectors'):
+        if (name == '.iram0.vectors') and ".iram0.text" in section_data.keys():
             # combine these
             size = len(section_data['.iram0.vectors']['data']) + len(section_data['.iram0.text']['data'])
         else:
+            if name not in section_data.keys():
+                continue
             size = len(section_data[name]['data'])
         
         p_flags = calcPhFlg(flags)
