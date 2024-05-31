@@ -1,4 +1,7 @@
 # ESP32 Firmware Image to ELF
+
+‼️This fork contains a bug fixes that caused the elf creation process to be interrupted
+
 This tool can be used to convert a flash dump from an ESP32 into an ELF file.
 
 Authors: @lynerc and @\_NickMiles\_

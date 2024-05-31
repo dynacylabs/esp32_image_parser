@@ -4,6 +4,8 @@
 import sys
 import json
 import os, argparse
+
+from esptool.bin_image import LoadFirmwareImage
 from makeelf.elf import *
 from esptool import *
 from esp32_firmware_reader import *
@@ -154,9 +156,20 @@ def image2elf(filename, output_file, verbose=False):
 
         if (name == '.iram0.vectors'):
             # combine these
-            size = len(section_data['.iram0.vectors']['data']) + len(section_data['.iram0.text']['data'])
+            iram0_text_len = 0
+            segment_text = section_data.get('.iram0.text')
+            if segment_text is not None:
+                iram0_text_len = len(segment_text.get('data'))
+
+            size = len(section_data['.iram0.vectors']['data']) + iram0_text_len
         else:
-            size = len(section_data[name]['data'])
+            segment = section_data.get(name)
+
+            if segment is None:
+                print(f'Segment {name} not found in section data. Skipping...')
+                continue
+
+            size = len(segment['data'])
         
         p_flags = calcPhFlg(flags)
         addr = section_data[name]['addr']
