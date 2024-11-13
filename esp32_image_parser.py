@@ -231,6 +231,7 @@ def main():
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
     arg_parser.add_argument('-variant', choices=['esp32', 'esp32s3', 'esp32c3'], help='ESP32 variant', default="esp32")
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
+    arg_parser.add_argument('--no_partitions', default=False, help='Ignore Partition data (when using create_elf)', action='store_true')
 
     args = arg_parser.parse_args()
 
@@ -244,7 +245,7 @@ def main():
         part_table = read_partition_table(fh, verbose)
 
         if args.action in ['dump_partition', 'create_elf', 'dump_nvs']:
-            if (args.partition is None and args.action != 'dump_nvs'):
+            if (args.partition is None and args.action != 'dump_nvs' and not args.no_partitions):
                 print("Need partition name")
                 return
 
@@ -257,7 +258,8 @@ def main():
             if args.action == 'dump_partition' and args.output is not None:
                 dump_file = args.output
             else:
-                dump_file = part_name + '_out.bin'
+                if not args.no_partitions:
+                    dump_file = part_name + '_out.bin'
 
             if part_name in part_table:
                 part = part_table[part_name]
@@ -288,6 +290,9 @@ def main():
                             sys.stdout = sys.stdout = sys.__stdout__ # re-enable print()
                             if(args.nvs_output_type == "json"):
                                 print(json.dumps(pages))
+            elif args.no_partitions and args.action == 'create_elf':
+                output_file = args.output
+                image2elf(args.input, output_file, args.variant, verbose)
             else:
                 print("Partition '" + part_name + "' not found.")
 
