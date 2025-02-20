@@ -1,7 +1,7 @@
 # ESP32 Firmware Image to ELF
 This tool can be used to convert a flash dump from an ESP32 into an ELF file.
 
-Authors: @lynerc and @\_NickMiles\_
+Authors: @lynerc and @\_NickMiles\_ and @precurse
 
 There are three actions:
 - **show_partitions** - will display all of the partitions found in an image file.
@@ -29,6 +29,11 @@ Dumps to ble_data.dump
 Converts ota_0 partition into ELF. Writes to ota_0.elf
 
 `$ python3 esp32_image_parser.py create_elf espwroom32.bin -partition ota_0 -output ota_0.elf`
+
+## Convert a partitionless file into an ELF file
+Converts partitionless file into ELF. Common for OTA update files that start with 0xE9 magic bytes. Writes to binary.elf
+
+`$ python3 esp32_image_parser.py create_elf espwroom32.bin --no_partitions -output binary.elf`
 
 ## Dump a specific NVS partition
 Dumps the nvs partition

@@ -17,24 +17,25 @@ for i in range(0,16):
   PART_SUBTYPES_APP[0x10 | i] = "ota_" + str(i)
 
 PART_SUBTYPES_DATA = {
-  0x00: "OTA",
-  0x01: "PHY",
-  0x02: "NVS",
-  0x03: "COREDUMP",
-  0x04: "NVS KEYS",
-  0x05: "EFUSE",
-  0x06: "UNDEFINED",
-  0x80: "ESPHTTPD",
-  0x81: "FAT",
-  0x82: "SPIFFS"
+    0x00: "ota",
+    0x01: "phy",
+    0x02: "nvs",
+    0x03: "coredump",
+    0x04: "nvs_keys",
+    0x05: "efuse",
+    0x06: "undefined(0x06)",
+    0x80: "esphttpd",
+    0x81: "fat",
+    0x82: "spiffs",
+    0x83: "littlefs"
 }
 
 def print_verbose(verbose, value):
     if verbose:
         print(value)
 
-def read_partition_table(fh, verbose=False):
-    fh.seek(0x8000)
+def read_partition_table(fh, verbose=False, p_offset=0x8000):
+    fh.seek(p_offset)
     partition_table = {}
 
     print_verbose(verbose, "reading partition table...")
@@ -68,7 +69,7 @@ def read_partition_table(fh, verbose=False):
         if(part_type in PART_TYPES):
             part_type_label = PART_TYPES[part_type]
 
-        part_subtype_label = "unknown"
+        part_subtype_label = f"unknown({hex(part_subtype)})"
         if(part_type_label == "APP" and part_subtype in PART_SUBTYPES_APP):
             part_subtype_label = PART_SUBTYPES_APP[part_subtype]
         if(part_type_label == "DATA" and part_subtype in PART_SUBTYPES_DATA):
