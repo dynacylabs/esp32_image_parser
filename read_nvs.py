@@ -127,6 +127,18 @@ def parse_nvs_entries(entries, entry_state_bitmap):
             print("      Data (I32) : %d" % (data))
             entry_data["entry_data_type"] = "I32"
             entry_data["entry_data"] = data
+        
+        elif(nvs_types[entry_type] == "U64"):
+            data = struct.unpack("<Q", data[0:8])[0]
+            print("      Data (U64) : %d" % (data))
+            entry_data["entry_data_type"] = "U64"
+            entry_data["entry_data"] = data
+
+        elif(nvs_types[entry_type] == "I64"):
+            data = struct.unpack("<q", data[0:8])[0]
+            print("      Data (I64) : %d" % (data))
+            entry_data["entry_data_type"] = "I64"
+            entry_data["entry_data"] = data
 
         elif(nvs_types[entry_type] == "STR"):
             str_size = struct.unpack("<H", data[0:2])[0]

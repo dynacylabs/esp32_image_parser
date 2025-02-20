@@ -232,7 +232,7 @@ def main():
     arg_parser.add_argument('-output', help='Output file name')
     arg_parser.add_argument('-nvs_output_type', help='output type for nvs dump', type=str, choices=["text","json"], default="text")
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
-    arg_parser.add_argument('-partition_offset', help='Set partition offset(HEX) (e.g. 0x8000)')
+    arg_parser.add_argument('-partition_offset', default='0x8000', help='Set partition offset(HEX) (e.g. 0x8000)')
     arg_parser.add_argument('-variant', choices=['esp32', 'esp32s3', 'esp32c3'], help='ESP32 variant', default="esp32")
     arg_parser.add_argument('-appimage', default=False, action='store_true', help='Input file is a single application binary image instead of flash dump')
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
@@ -251,7 +251,8 @@ def main():
                 print("appimage option can only be used with create_elf action")
             if args.output is None:
                 print("Need output file name")
-            image2elf(args.input, args.output)
+            image2elf(args.input, args.output, verbose)
+            exit(0)
 
         # parse that ish
         if "partition_offset" in args:
@@ -269,6 +270,17 @@ def main():
                 args.partition = 'nvs'
 
             part_name = args.partition
+
+            if part_name == 'all':
+                for part in part_table:
+                    dump_file = part + '_out.bin'
+                    if args.output is not None:
+                        if not os.path.exists(args.output):
+                            os.makedirs(args.output)
+                        dump_file = args.output + '/' + dump_file
+                    dump_partition(fh, part, part_table[part]['offset'], part_table[part]['size'], dump_file)
+                print("All partitions dumped")
+                exit(0)
             
             if args.action == 'dump_partition' and args.output is not None:
                 dump_file = args.output
