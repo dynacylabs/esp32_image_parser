@@ -259,7 +259,7 @@ def main():
             args.partition_offset = int(args.partition_offset, 16)
 
         part_table = read_partition_table(fh, verbose, p_offset=args.partition_offset)
-
+        
         if args.action in ['dump_partition', 'create_elf', 'dump_nvs']:
             if (args.partition is None and args.action != 'dump_nvs' and not args.no_partitions):
                 print("Need partition name")
