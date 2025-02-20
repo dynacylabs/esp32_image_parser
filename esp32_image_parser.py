@@ -10,6 +10,8 @@ from esptool.bin_image import *
 from esp32_firmware_reader import *
 from read_nvs import *
 
+symbols_dump = os.path.dirname(os.path.realpath(__file__)) + "/symbols_dump.txt"
+
 def image_base_name(path):
     filename_w_ext = os.path.basename(path)
     filename, ext = os.path.splitext(filename_w_ext)
@@ -53,6 +55,7 @@ def image2elf(filename, output_file, verbose=False):
     # maps segment names to ELF sections
     section_map = {
         'DROM'                      : '.flash.rodata',
+        'BYTE_ACCESSIBLE, DRAM'     : '.dram0.data',
         'BYTE_ACCESSIBLE, DRAM, DMA': '.dram0.data',
         'BYTE_ACCESSIBLE, DRAM'     : '.dram0.data',
         'IROM'                      : '.flash.text',
@@ -188,7 +191,7 @@ def image2elf(filename, output_file, verbose=False):
 
 def add_elf_symbols(elf):
 
-    fh = open("symbols_dump.txt", "r")
+    fh = open(symbols_dump, "r")
     lines = fh.readlines()
 
     bind_map = {"LOCAL" : STB.STB_LOCAL, "GLOBAL" : STB.STB_GLOBAL}
@@ -222,6 +225,7 @@ def main():
     arg_parser.add_argument('-output', help='Output file name')
     arg_parser.add_argument('-nvs_output_type', help='output type for nvs dump', type=str, choices=["text","json"], default="text")
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
+    arg_parser.add_argument('-appimage', default=False, action='store_true', help='Input file is a single application binary image instead of flash dump')
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
 
     args = arg_parser.parse_args()
@@ -231,6 +235,13 @@ def main():
         # read_partition_table will show the partitions if verbose
         if args.action == 'show_partitions' or args.v is True:
             verbose = True
+
+        if args.appimage:
+            if args.action != "create_elf":
+                print("appimage option can only be used with create_elf action")
+            if args.output is None:
+                print("Need output file name")
+            image2elf(args.input, args.output)
 
         # parse that ish
         part_table = read_partition_table(fh, verbose)
