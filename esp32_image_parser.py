@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 # Convert an ESP 32 OTA partition into an ELF
+# @precurse added support for other ESP32 variants
+
 import sys
 import json
 import os, argparse
@@ -40,8 +42,8 @@ def calcPhFlg(flags):
         p_flags |= PF.PF_X
     return p_flags
 
-def image2elf(filename, output_file, verbose=False):
-    image = LoadFirmwareImage('esp32', filename)
+def image2elf(filename, output_file, variant, verbose=False):
+    image = LoadFirmwareImage(variant, filename)
 
     # parse image name
     # e.g. 'image.bin' turns to 'image'
@@ -54,11 +56,13 @@ def image2elf(filename, output_file, verbose=False):
 
     # maps segment names to ELF sections
     section_map = {
-        'DROM'                      : '.flash.rodata',
-        'BYTE_ACCESSIBLE, DRAM'     : '.dram0.data',
-        'BYTE_ACCESSIBLE, DRAM, DMA': '.dram0.data',
-        'IROM'                      : '.flash.text',
-        #'RTC_IRAM'                  : '.rtc.text' TODO
+        'DROM'                                  : '.flash.rodata',
+        'BYTE_ACCESSIBLE, MEM_INTERNAL, DRAM'   : '.dram0.data',
+        'BYTE_ACCESSIBLE, DRAM, DMA'            : '.dram0.data',
+        'BYTE_ACCESSIBLE, DRAM'                 : '.dram0.data',
+        'IROM'                                  : '.flash.text',
+        'MEM_INTERNAL, IRAM'                    : '.iram0.vectors',
+        #'RTC_IRAM'                             : '.rtc.text' TODO
     }
 
     # map to hold pre-defined ELF section header attributes
@@ -156,12 +160,16 @@ def image2elf(filename, output_file, verbose=False):
     print_verbose(verbose, "\nAdding program headers")
     for (name, flags) in segments.items():
 
-        if (name == '.iram0.vectors'):
+        if (name == '.iram0.vectors') and '.iram0.text' in section_data:
             # combine these
-            size = len(section_data['.iram0.vectors']['data']) + len(section_data['.iram0.text']['data'])
+            size = len(section_data['.iram0.vectors']['data'])
+            try:
+                size += len(section_data['.iram0.text']['data'])
+            except KeyError:
+                pass
         else:
             size = len(section_data[name]['data'])
-        
+
         p_flags = calcPhFlg(flags)
         addr = section_data[name]['addr']
         align = 0x1000
@@ -225,8 +233,10 @@ def main():
     arg_parser.add_argument('-nvs_output_type', help='output type for nvs dump', type=str, choices=["text","json"], default="text")
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
     arg_parser.add_argument('-partition_offset', default='0x8000', help='Set partition offset(HEX) (e.g. 0x8000)')
+    arg_parser.add_argument('-variant', choices=['esp32', 'esp32s3', 'esp32c3'], help='ESP32 variant', default="esp32")
+    arg_parser.add_argument('-appimage', default=False, action='store_true', help='Input file is a single application binary image instead of flash dump')
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
-    arg_parser.add_argument('-appimage', default=False, help='Convert appimage to ELF', action='store_true')
+    arg_parser.add_argument('--no_partitions', default=False, help='Ignore Partition data (when using create_elf)', action='store_true')
 
     args = arg_parser.parse_args()
 
@@ -245,14 +255,19 @@ def main():
             exit(0)
 
         # parse that ish
-        args.partition_offset = int(args.partition_offset, 16)
+        if "partition_offset" in args:
+            args.partition_offset = int(args.partition_offset, 16)
 
         part_table = read_partition_table(fh, verbose, p_offset=args.partition_offset)
 
         if args.action in ['dump_partition', 'create_elf', 'dump_nvs']:
-            if (args.partition is None):
+            if (args.partition is None and args.action != 'dump_nvs' and not args.no_partitions):
                 print("Need partition name")
                 return
+
+            if (args.partition is None and args.action == 'dump_nvs'):
+                print("No partition specified. Trying nvs")
+                args.partition = 'nvs'
 
             part_name = args.partition
 
@@ -270,7 +285,8 @@ def main():
             if args.action == 'dump_partition' and args.output is not None:
                 dump_file = args.output
             else:
-                dump_file = part_name + '_out.bin'
+                if not args.no_partitions:
+                    dump_file = part_name + '_out.bin'
 
             if part_name in part_table:
                 part = part_table[part_name]
@@ -288,7 +304,7 @@ def main():
                             dump_partition(fh, part_name, part['offset'], part['size'], dump_file)
                             # we have to load from a file
                             output_file = args.output
-                            image2elf(dump_file, output_file, verbose)
+                            image2elf(dump_file, output_file, args.variant, verbose)
                 elif args.action == 'dump_nvs':
                     if part['type'] != 1 or part['subtype'] != 2: # Wifi NVS partition (4 is for encryption key)
                         print("Uh oh... bad partition type. Can only dump NVS partition type.")
@@ -301,6 +317,9 @@ def main():
                             sys.stdout = sys.stdout = sys.__stdout__ # re-enable print()
                             if(args.nvs_output_type == "json"):
                                 print(json.dumps(pages))
+            elif args.no_partitions and args.action == 'create_elf':
+                output_file = args.output
+                image2elf(args.input, output_file, args.variant, verbose)
             else:
                 print("Partition '" + part_name + "' not found.")
 
