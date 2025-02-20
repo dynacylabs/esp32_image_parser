@@ -232,6 +232,7 @@ def main():
     arg_parser.add_argument('-output', help='Output file name')
     arg_parser.add_argument('-nvs_output_type', help='output type for nvs dump', type=str, choices=["text","json"], default="text")
     arg_parser.add_argument('-partition', help='Partition name (e.g. ota_0)')
+    arg_parser.add_argument('-partition_offset', help='Set partition offset(HEX) (e.g. 0x8000)')
     arg_parser.add_argument('-variant', choices=['esp32', 'esp32s3', 'esp32c3'], help='ESP32 variant', default="esp32")
     arg_parser.add_argument('-appimage', default=False, action='store_true', help='Input file is a single application binary image instead of flash dump')
     arg_parser.add_argument('-v', default=False, help='Verbose output', action='store_true')
@@ -253,7 +254,10 @@ def main():
             image2elf(args.input, args.output)
 
         # parse that ish
-        part_table = read_partition_table(fh, verbose)
+        if "partition_offset" in args:
+            args.partition_offset = int(args.partition_offset, 16)
+
+        part_table = read_partition_table(fh, verbose, p_offset=args.partition_offset)
 
         if args.action in ['dump_partition', 'create_elf', 'dump_nvs']:
             if (args.partition is None and args.action != 'dump_nvs' and not args.no_partitions):
